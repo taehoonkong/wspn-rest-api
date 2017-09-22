@@ -3,11 +3,23 @@ require('dotenv').config()
 const express = require('express')
 const bodyParser = require('body-parser')
 const jwt = require('jsonwebtoken');
+const expressJwt = require('express-jwt') 
 const query = require('./query')
 
 const app = express()
 
 app.use(bodyParser.json())
+
+const jwtMiddleware = expressJwt({secret: process.env.SESSION_SECRET})
+
+app.get('/user', jwtMiddleware, (req, res) => {
+  query.getUserById(req.user.id)
+    .then(user => {
+      res.send({
+        username: user.username
+      })
+    })
+})
 
 app.post('/user', (req, res) => {
   // 사용자 생성
@@ -42,6 +54,15 @@ app.post('/login', (req, res) => {
       res.status(404)
       res.send('login failed')
     })
+})
+
+app.use(function (err, req, res, next) {
+  if(err.name === 'UnauthorizedError') {
+    res.status(401).send({
+      error: err.name,
+      message: err.message
+    })
+  }
 })
 
 app.listen(process.env.PORT, () => {
